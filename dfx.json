@@ -1,0 +1,26 @@
+{
+  "canisters": {
+    "decentralized_lms_backend": {
+      "candid": "src/decentralized_lms_backend/decentralized_lms_backend.did",
+      "package": "decentralized_lms_backend",
+      "type": "rust"
+    },
+    "decentralized_lms_frontend": {
+      "dependencies": [
+        "decentralized_lms_backend"
+      ],
+      "source": [
+        "src/decentralized_lms_frontend/assets"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

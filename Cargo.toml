@@ -1,5 +1,7 @@
 [workspace]
 members = [
-    "src/decentralized_lms_backend"
+    "src/router_canister",
+    "src/tenant_canister", 
+    "src/shared"
 ]
 resolver = "2"

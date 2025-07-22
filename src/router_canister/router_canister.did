@@ -1,0 +1,41 @@
+type LMSError = variant {
+  NotFound : text;
+  Unauthorized : text;
+  ValidationError : text;
+  InternalError : text;
+};
+
+type UserRole = variant {
+  Student;
+  Instructor;
+  Admin;
+  TenantAdmin;
+};
+
+type Tenant = record {
+  id : text;
+  name : text;
+  domain : text;
+  canister_id : text;
+  created_at : nat64;
+  is_active : bool;
+};
+
+type LMSResult = variant {
+  Ok : Tenant;
+  Err : LMSError;
+};
+
+type LMSResult_1 = variant {
+  Ok : vec nat8;
+  Err : LMSError;
+};
+
+service : {
+  get_tenant : (text) -> (LMSResult) query;
+  get_tenant_by_domain : (text) -> (LMSResult) query;
+  health_check : () -> (text) query;
+  list_tenants : () -> (vec Tenant) query;
+  register_tenant : (text, text, text, text) -> (LMSResult);
+  route_to_tenant : (text, text, vec nat8) -> (LMSResult_1);
+}

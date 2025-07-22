@@ -1,0 +1,58 @@
+type LMSError = variant {
+  NotFound : text;
+  Unauthorized : text;
+  ValidationError : text;
+  InternalError : text;
+};
+
+type UserRole = variant {
+  Student;
+  Instructor;
+  Admin;
+  TenantAdmin;
+};
+
+type User = record {
+  id : text;
+  name : text;
+  email : text;
+  role : UserRole;
+  tenant_id : text;
+};
+
+type Course = record {
+  id : text;
+  title : text;
+  description : text;
+  instructor_id : text;
+  tenant_id : text;
+  created_at : nat64;
+  updated_at : nat64;
+};
+
+type LMSResult = variant {
+  Ok : User;
+  Err : LMSError;
+};
+
+type LMSResult_1 = variant {
+  Ok : Course;
+  Err : LMSError;
+};
+
+type LMSResult_2 = variant {
+  Ok;
+  Err : LMSError;
+};
+
+service : (text) -> {
+  add_admin : (text) -> (LMSResult_2);
+  create_course : (text, text, text, text) -> (LMSResult_1);
+  get_course : (text) -> (LMSResult_1) query;
+  get_tenant_info : () -> (text) query;
+  get_user : (text) -> (LMSResult) query;
+  health_check : () -> (text) query;
+  list_courses : () -> (vec Course) query;
+  list_users : () -> (vec User) query;
+  register_user : (text, text, text, UserRole) -> (LMSResult);
+}

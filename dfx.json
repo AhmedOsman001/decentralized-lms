@@ -1,16 +1,22 @@
 {
   "canisters": {
-    "decentralized_lms_backend": {
-      "candid": "src/decentralized_lms_backend/decentralized_lms_backend.did",
-      "package": "decentralized_lms_backend",
+    "router_canister": {
+      "candid": "src/router_canister/router_canister.did",
+      "package": "router_canister",
       "type": "rust"
     },
-    "decentralized_lms_frontend": {
+    "tenant_canister": {
+      "candid": "src/tenant_canister/tenant_canister.did",
+      "package": "tenant_canister", 
+      "type": "rust"
+    },
+    "frontend": {
       "dependencies": [
-        "decentralized_lms_backend"
+        "router_canister",
+        "tenant_canister"
       ],
       "source": [
-        "src/decentralized_lms_frontend/assets"
+        "frontend/dist"
       ],
       "type": "assets"
     }

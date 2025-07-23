@@ -1,58 +1,78 @@
-type LMSError = variant {
-  NotFound : text;
-  Unauthorized : text;
-  ValidationError : text;
-  InternalError : text;
+type Course = record {
+  id : text;
+  title : text;
+  updated_at : nat64;
+  description : text;
+  created_at : nat64;
+  tenant_id : text;
+  lessons : vec text;
+  is_published : bool;
+  enrolled_students : vec text;
+  instructor_id : text;
 };
 
-type UserRole = variant {
-  Student;
-  Instructor;
-  Admin;
-  TenantAdmin;
+type Grade = record {
+  id : text;
+  student_id : text;
+  feedback : opt text;
+  lesson_id : opt text;
+  max_score : float64;
+  course_id : text;
+  score : float64;
+  graded_at : nat64;
+  graded_by : text;
+  grade_type : GradeType;
+  quiz_id : opt text;
+};
+
+type GradeType = variant { Assignment; Quiz; Final; Participation };
+
+type LMSError = variant {
+  NotFound : text;
+  ValidationError : text;
+  Unauthorized : text;
+  AlreadyExists : text;
+  InvalidRole : text;
+  InternalError : text;
+  InitializationError : text;
+};
+
+type Result = variant { Ok : Course; Err : LMSError };
+type Result_1 = variant { Ok; Err : LMSError };
+type Result_2 = variant { Ok : TenantData; Err : LMSError };
+type Result_3 = variant { Ok : User; Err : LMSError };
+type Result_4 = variant { Ok : Grade; Err : LMSError };
+
+type TenantData = record {
+  created_at : nat64;
+  tenant_id : text;
+  is_initialized : bool;
+  admin_principal : principal;
 };
 
 type User = record {
   id : text;
-  name : text;
-  email : text;
-  role : UserRole;
-  tenant_id : text;
-};
-
-type Course = record {
-  id : text;
-  title : text;
-  description : text;
-  instructor_id : text;
-  tenant_id : text;
-  created_at : nat64;
   updated_at : nat64;
+  name : text;
+  role : UserRole;
+  created_at : nat64;
+  email : text;
+  tenant_id : text;
+  is_active : bool;
 };
 
-type LMSResult = variant {
-  Ok : User;
-  Err : LMSError;
-};
+type UserRole = variant { Instructor; TenantAdmin; Student; Admin };
 
-type LMSResult_1 = variant {
-  Ok : Course;
-  Err : LMSError;
-};
-
-type LMSResult_2 = variant {
-  Ok;
-  Err : LMSError;
-};
-
-service : (text) -> {
-  add_admin : (text) -> (LMSResult_2);
-  create_course : (text, text, text, text) -> (LMSResult_1);
-  get_course : (text) -> (LMSResult_1) query;
-  get_tenant_info : () -> (text) query;
-  get_user : (text) -> (LMSResult) query;
+service : () -> {
+  create_course : (text, text, text) -> (Result);
+  enroll_student : (text, text) -> (Result_1);
+  get_course : (text) -> (Result) query;
+  get_student_grades : (text) -> (vec Grade) query;
+  get_tenant_info : () -> (Result_2) query;
+  get_user : (text) -> (Result_3) query;
   health_check : () -> (text) query;
   list_courses : () -> (vec Course) query;
   list_users : () -> (vec User) query;
-  register_user : (text, text, text, UserRole) -> (LMSResult);
-}
+  record_grade : (text, text, float64, float64, GradeType, opt text) -> (Result_4);
+  register_user : (text, text, text, UserRole, text) -> (Result_3);
+};

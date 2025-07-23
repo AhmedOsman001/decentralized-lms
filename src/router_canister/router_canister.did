@@ -1,41 +1,40 @@
 type LMSError = variant {
   NotFound : text;
-  Unauthorized : text;
   ValidationError : text;
+  Unauthorized : text;
+  AlreadyExists : text;
+  InvalidRole : text;
   InternalError : text;
+  InitializationError : text;
 };
 
-type UserRole = variant {
-  Student;
-  Instructor;
-  Admin;
-  TenantAdmin;
+type Result = variant { Ok : principal; Err : LMSError };
+type Result_1 = variant { Ok : Tenant; Err : LMSError };
+type Result_2 = variant { Ok; Err : LMSError };
+
+type RouterStats = record {
+  has_wasm_module : bool;
+  routing_entries : nat64;
+  tenant_count : nat64;
 };
 
 type Tenant = record {
   id : text;
-  name : text;
   domain : text;
-  canister_id : text;
+  name : text;
+  canister_id : principal;
   created_at : nat64;
   is_active : bool;
-};
-
-type LMSResult = variant {
-  Ok : Tenant;
-  Err : LMSError;
-};
-
-type LMSResult_1 = variant {
-  Ok : vec nat8;
-  Err : LMSError;
+  admin_principal : principal;
 };
 
 service : {
-  get_tenant : (text) -> (LMSResult) query;
-  get_tenant_by_domain : (text) -> (LMSResult) query;
+  get_router_stats : () -> (RouterStats) query;
+  get_routing_table : () -> (vec record { text; principal }) query;
+  get_tenant_canister : (text) -> (Result) query;
   health_check : () -> (text) query;
   list_tenants : () -> (vec Tenant) query;
-  register_tenant : (text, text, text, text) -> (LMSResult);
-  route_to_tenant : (text, text, vec nat8) -> (LMSResult_1);
+  register_tenant : (text, text, text, text) -> (Result_1);
+  register_university : (text, text, principal) -> (Result_1);
+  upload_wasm_module : (blob) -> (Result_2);
 }

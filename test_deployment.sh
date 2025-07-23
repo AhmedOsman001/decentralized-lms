@@ -60,7 +60,7 @@ fi
 # Test user registration
 USER_ID="student_$TIMESTAMP"
 EMAIL="john_$TIMESTAMP@test.edu"
-USER_RESULT=$(dfx canister call tenant_canister register_user "(\"$USER_ID\", \"John Doe\", \"$EMAIL\", variant { Student })" 2>/dev/null)
+USER_RESULT=$(dfx canister call tenant_canister register_user "(\"$USER_ID\", \"John Doe\", \"$EMAIL\", variant { Student },\"$TENANT_ID\" )" 2>/dev/null)
 if echo "$USER_RESULT" | grep  Ok; then
     echo -e "✅ User registration: ${GREEN}PASSED${NC}"
 else

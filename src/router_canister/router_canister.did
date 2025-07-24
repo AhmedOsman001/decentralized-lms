@@ -11,6 +11,7 @@ type LMSError = variant {
 type Result = variant { Ok : principal; Err : LMSError };
 type Result_1 = variant { Ok : Tenant; Err : LMSError };
 type Result_2 = variant { Ok; Err : LMSError };
+type Result_3 = variant { Ok : text; Err : LMSError };
 
 type RouterStats = record {
   has_wasm_module : bool;
@@ -18,23 +19,89 @@ type RouterStats = record {
   tenant_count : nat64;
 };
 
+type CycleInfo = record {
+  current_balance : nat;
+  tenant_count : nat64;
+  cycles_per_tenant : nat;
+  can_create_more_tenants : bool;
+  estimated_max_additional_tenants : nat64;
+};
+
+type TemplateConfig = record {
+  template_canister_id : opt principal;
+  template_version : text;
+  last_updated : nat64;
+  auto_update : bool;
+};
+
+type TenantSettings = record {
+  max_students : nat32;
+  max_instructors : nat32;
+  max_courses : nat32;
+  allow_public_enrollment : bool;
+  custom_branding : bool;
+};
+
 type Tenant = record {
   id : text;
-  domain : text;
   name : text;
-  canister_id : principal;
+  subdomain : text;
+  canister_id : text;
+  admin_ids : vec text;
   created_at : nat64;
+  updated_at : nat64;
   is_active : bool;
-  admin_principal : principal;
+  settings : TenantSettings;
+};
+
+type TenantRegistryInspection = record {
+  total_tenants : nat64;
+  tenants : vec record { text; Tenant };
+  tenant_ids : vec text;
+  active_tenants : vec text;
+  inactive_tenants : vec text;
+};
+
+type RoutingTableInspection = record {
+  total_routes : nat64;
+  routes : vec record { text; principal };
+  subdomains : vec text;
+  canister_ids : vec principal;
+};
+
+type FullSystemInspection = record {
+  tenant_registry : TenantRegistryInspection;
+  routing_table : RoutingTableInspection;
+  orphaned_routes : vec record { text; principal };
+  orphaned_tenants : vec record { text; Tenant };
+  data_consistency : bool;
 };
 
 service : {
+  // Core functionality
   get_router_stats : () -> (RouterStats) query;
+  get_cycle_info : () -> (CycleInfo) query;
   get_routing_table : () -> (vec record { text; principal }) query;
   get_tenant_canister : (text) -> (Result) query;
   health_check : () -> (text) query;
   list_tenants : () -> (vec Tenant) query;
-  register_tenant : (text, text, text, text) -> (Result_1);
+  
+  // Template-based tenant provisioning (Modern approach)
+  configure_template : (principal, text) -> (Result_2);
+  get_template_config : () -> (TemplateConfig) query;
+  auto_configure_template : () -> (Result_3);
   register_university : (text, text, principal) -> (Result_1);
-  upload_wasm_module : (blob) -> (Result_2);
+  
+  // Legacy registration (for backward compatibility)
+  register_tenant : (text, text, text, text) -> (Result_1);
+  
+  // System inspection and management
+  inspect_tenant_registry : () -> (TenantRegistryInspection) query;
+  inspect_routing_table : () -> (RoutingTableInspection) query;
+  inspect_full_system : () -> (FullSystemInspection) query;
+  log_tenant_registry : () -> (text);
+  log_routing_table : () -> (text);
+  log_full_system : () -> (text);
+  remove_tenant : (text) -> (Result_2);
+  clear_all_tenants : () -> (text);
 }

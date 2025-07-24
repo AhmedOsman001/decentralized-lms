@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://yourusername.github.io/your-repo",
+  "homepage": "https://ahmedosman001.github.io/decentralized_lms",
 
   "scripts": {
     "dev": "vite",

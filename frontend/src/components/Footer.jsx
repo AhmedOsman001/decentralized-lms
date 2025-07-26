@@ -8,10 +8,10 @@ const Footer = () => {
           <div className="logo-icon">
             <span className="icon">📚</span>
           </div>
-          <span className="logo-text">LearnHub</span>
+          <span className="logo-text">ChainHub</span>
         </div>
         <div className="footer-copyright">
-          © 2025 LearnHub. All rights reserved.
+          © 2025 ChainHub. All rights reserved.
         </div>
       </div>
     </footer>

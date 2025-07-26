@@ -14,7 +14,7 @@ const Navigation = () => {
           <div className="logo-icon">
             <span className="icon">📚</span>
           </div>
-          <span className="logo-text">LearnHub</span>
+          <span className="logo-text">ChainHub</span>
         </div>
         
         <div className="nav-links">

@@ -61,6 +61,7 @@ pub async fn install_latest_template(
     canister_id: Principal,
     template_canister_id: Principal,
     admin_principal: Principal,
+    tenant_id: String,
 ) -> Result<(), String> {
     // Use the management canister to copy code from template
     // This is a simplified approach - in production, you'd have more sophisticated template management
@@ -69,7 +70,7 @@ pub async fn install_latest_template(
     // In a real implementation, you might use canister_status to get the module_hash
     // and then install from a known source
     
-    match crate::canister_management::install_from_template(canister_id, template_canister_id, admin_principal).await {
+    match crate::canister_management::install_from_template(canister_id, template_canister_id, admin_principal, tenant_id).await {
         Ok(_) => {
             ic_cdk::println!("Successfully installed template {} on canister {}", 
                            template_canister_id, canister_id);

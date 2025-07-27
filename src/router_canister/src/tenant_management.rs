@@ -44,8 +44,11 @@ pub async fn register_university(
         Err(e) => return Err(LMSError::InternalError(format!("Failed to create canister: {:?}", e))),
     };
     
-    // Install latest template code
-    match install_latest_template(canister_id, template_canister_id, admin_principal).await {
+    // Generate tenant ID once to ensure consistency
+    let tenant_id = format!("tenant_{}", current_time());
+    
+    // Install latest template code with the tenant ID
+    match install_latest_template(canister_id, template_canister_id, admin_principal, tenant_id.clone()).await {
         Ok(_) => {},
         Err(e) => {
             // Rollback: delete the created canister
@@ -54,10 +57,9 @@ pub async fn register_university(
         }
     }
     
-    // Create tenant record
-    let tenant_id = utils::generate_id("tenant");
+    // Create tenant record using the same tenant_id that was passed to the canister
     let tenant = Tenant {
-        id: format!("tenant_{}", current_time()),
+        id: tenant_id.clone(),
         name: university_name.clone(),
         subdomain: subdomain.clone(),
         canister_id: canister_id.to_string(),
@@ -80,7 +82,7 @@ pub async fn register_university(
     });
     
     with_tenant_registry(|registry| {
-        registry.borrow_mut().insert(tenant_id, tenant.clone());
+        registry.borrow_mut().insert(tenant_id.clone(), tenant.clone());
     });
     
     ic_cdk::println!("University registered: {} -> {} (using template: {})", 

@@ -6,6 +6,9 @@ use ic_cdk::api::management_canister::main::{
 };
 use ic_cdk::id;
 
+// Include the tenant WASM bytes at compile time
+include!(concat!(env!("OUT_DIR"), "/tenant_wasm.rs"));
+
 /// Create a new canister using the management canister
 pub async fn create_canister() -> Result<Principal, String> {
     // IC requires minimum 500 billion cycles to create a canister
@@ -40,41 +43,41 @@ pub async fn delete_canister(canister_id: Principal) -> Result<(), String> {
     }
 }
 
-/// Install canister code from a template canister
+/// Install canister code from embedded tenant WASM
 pub async fn install_from_template(
     canister_id: Principal,
     _template_canister_id: Principal, // Prefixed with _ to avoid unused warning
-    admin_principal: Principal,
+    _admin_principal: Principal,      // Prefixed with _ to avoid unused warning
+    tenant_id: String,
 ) -> Result<(), String> {
-    // In a production system, you would:
-    // 1. Get the WASM from a known source (e.g., a WASM registry)
-    // 2. Or copy from a well-known template canister
-    // 3. Or use a governance-controlled upgrade mechanism
+    // Use the embedded tenant WASM
+    let tenant_wasm = get_tenant_wasm();
     
-    // For now, we'll create a minimal working canister
-    // This is a placeholder - in production you'd fetch the actual template WASM
-    let template_wasm = create_minimal_tenant_wasm();
+    // Log the WASM size for debugging
+    ic_cdk::println!("Installing tenant WASM: {} bytes", tenant_wasm.len());
+    
+    // Create initialization arguments: Some(tenant_id: String)
+    let init_args = candid::encode_one(&Some(tenant_id.clone()))
+        .map_err(|e| format!("Failed to encode tenant ID: {}", e))?;
     
     let install_args = InstallCodeArgument {
         mode: CanisterInstallMode::Install,
         canister_id,
-        wasm_module: template_wasm,
-        arg: candid::encode_one(&admin_principal).map_err(|e| format!("Failed to encode admin principal: {}", e))?,
+        wasm_module: tenant_wasm,
+        arg: init_args,
     };
     
     match install_code(install_args).await {
-        Ok(_) => Ok(()),
+        Ok(_) => {
+            ic_cdk::println!("Successfully installed tenant WASM on canister {} with tenant_id: {}", canister_id, tenant_id);
+            Ok(())
+        },
         Err((code, msg)) => Err(format!("Install template failed: {:?} - {}", code, msg)),
     }
 }
 
-/// Create a minimal tenant WASM for testing (Production would fetch from template registry)
-fn create_minimal_tenant_wasm() -> Vec<u8> {
-    // This is a minimal valid WASM module
-    // In production, this would be fetched from a template registry or built from source
-    vec![
-        0x00, 0x61, 0x73, 0x6d, // magic number
-        0x01, 0x00, 0x00, 0x00, // version
-        // Additional sections would be added for a real canister
-    ]
+/// Get the tenant WASM bytes (either embedded or fetched from template)
+fn get_tenant_wasm() -> Vec<u8> {
+    // Use the tenant WASM embedded at compile time
+    TENANT_WASM.to_vec()
 }

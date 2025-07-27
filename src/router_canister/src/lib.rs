@@ -8,7 +8,6 @@ mod canister_management;
 mod tenant_management;
 mod inspection;
 mod api;
-mod migration;
 
 // Re-export public types for external use
 pub use types::{

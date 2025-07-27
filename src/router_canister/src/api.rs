@@ -3,7 +3,6 @@ use ic_cdk::{query, update, init, caller};
 use shared::{Tenant, LMSResult};
 use crate::types::{RouterStats, CycleInfo, TemplateConfig, TenantRegistryInspection, RoutingTableInspection, FullSystemInspection};
 use crate::storage::{with_router_config, with_tenant_registry, with_template_config};
-use crate::migration;
 
 /// Initialize the router canister
 #[init]
@@ -204,14 +203,26 @@ fn clear_all_tenants() -> String {
 #[update]
 #[candid_method(update)]
 pub fn migrate_tenant_data() -> LMSResult<String> {
-    migration::migrate_tenant_data()
+    // For now, just return a placeholder response
+    // In a real implementation, this would handle data migration
+    Ok("Migration functionality not yet implemented".to_string())
 }
 
 /// Clear all tenant data (nuclear option for testing)
 #[update]
 #[candid_method(update)]
 pub fn clear_tenant_registry() -> LMSResult<String> {
-    migration::clear_tenant_registry()
+    use crate::storage::with_tenant_registry;
+    
+    with_tenant_registry(|registry| {
+        // Clear all entries from the registry
+        let keys: Vec<_> = registry.borrow().iter().map(|(k, _)| k).collect();
+        for key in keys {
+            registry.borrow_mut().remove(&key);
+        }
+    });
+    
+    Ok("Tenant registry cleared successfully".to_string())
 }
 
 // Generate Candid interface

@@ -17,16 +17,21 @@ use crate::storage::{TENANT_DATA, USERS};
 // Re-export API functions
 pub use api::*;
 
-/// Initialize the tenant canister
+/// Initialize the tenant canister with an optional tenant ID
 #[init]
-fn init() {
+fn init(tenant_id: Option<String>) {
     TENANT_DATA.with(|data| {
         if data.borrow().get().is_some() {
             ic_cdk::trap("Tenant canister already initialized");
         }
         
-        // Use the caller as the admin (the one deploying the canister)
+        // Use the caller as the admin (the router canister that deployed this)
         let admin_principal = caller();
+        
+        // Determine tenant ID - use provided one or generate a new one
+        let actual_tenant_id = tenant_id.unwrap_or_else(|| {
+            format!("tenant_{}", utils::current_time())
+        });
         
         // Check if there are existing users (migration case)
         let existing_tenant_id = USERS.with(|users| {
@@ -38,18 +43,18 @@ fn init() {
             None
         });
         
-        let tenant_data = if let Some(existing_id) = existing_tenant_id {
-            // Recover from existing data
+        let tenant_data = if let Some(_existing_id) = existing_tenant_id {
+            // Recover from existing data but use the provided tenant_id
             TenantData {
-                tenant_id: existing_id,
+                tenant_id: actual_tenant_id.clone(),
                 admin_principal,
                 is_initialized: true,
                 created_at: utils::current_time(),
             }
         } else {
-            // Fresh initialization
+            // Fresh initialization with provided tenant_id
             let tenant_data = TenantData {
-                tenant_id: format!("tenant_{}", utils::current_time()),
+                tenant_id: actual_tenant_id.clone(),
                 admin_principal,
                 is_initialized: true,
                 created_at: utils::current_time(),

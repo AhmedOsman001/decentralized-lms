@@ -12,7 +12,7 @@ pub struct Course {
     pub id: String,
     pub title: String,
     pub description: String,
-    pub instructor_id: String,
+    pub instructor_ids: Vec<String>, // Multiple instructors support
     pub tenant_id: String,
     pub lessons: Vec<String>, // Lesson IDs
     pub enrolled_students: Vec<String>, // Student IDs

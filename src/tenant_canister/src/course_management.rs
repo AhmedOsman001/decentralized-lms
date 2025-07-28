@@ -23,7 +23,7 @@ pub fn create_course(id: String, title: String, description: String) -> LMSResul
             id: id.clone(),
             title,
             description,
-            instructor_id: caller.to_string(),
+            instructor_ids: vec![caller.to_string()], // Initialize with creator as first instructor
             tenant_id,
             lessons: Vec::new(),
             enrolled_students: Vec::new(),
@@ -56,7 +56,7 @@ pub fn get_course(course_id: String) -> LMSResult<Course> {
 
 /// Enroll a student in a course
 pub fn enroll_student(course_id: String, student_id: String) -> LMSResult<()> {
-    // Only admins and instructors can enroll students
+    // Only course instructors and admins can enroll students
     is_teacher_or_admin()?;
     
     COURSES.with(|courses| {
@@ -64,6 +64,15 @@ pub fn enroll_student(course_id: String, student_id: String) -> LMSResult<()> {
         
         match courses_map.get(&course_id) {
             Some(mut course) => {
+                // Check if caller is one of the course instructors or admin
+                let caller = caller();
+                if !course.instructor_ids.contains(&caller.to_string()) {
+                    // Check if admin
+                    if crate::auth::is_admin().is_err() {
+                        return Err(LMSError::Unauthorized("Only course instructors or admin can enroll students".to_string()));
+                    }
+                }
+                
                 if !course.enrolled_students.contains(&student_id) {
                     course.enrolled_students.push(student_id.clone());
                     course.updated_at = utils::current_time();
@@ -89,12 +98,12 @@ pub fn update_course(course_id: String, title: Option<String>, description: Opti
         
         match courses_map.get(&course_id) {
             Some(mut course) => {
-                // Check if caller is the instructor or admin
+                // Check if caller is one of the course instructors or admin
                 let caller = caller();
-                if course.instructor_id != caller.to_string() {
+                if !course.instructor_ids.contains(&caller.to_string()) {
                     // Check if admin
                     if crate::auth::is_admin().is_err() {
-                        return Err(LMSError::Unauthorized("Only course instructor or admin can update course".to_string()));
+                        return Err(LMSError::Unauthorized("Only course instructors or admin can update course".to_string()));
                     }
                 }
                 
@@ -122,7 +131,7 @@ pub fn get_instructor_courses(instructor_id: String) -> Vec<Course> {
     COURSES.with(|courses| {
         courses.borrow()
             .iter()
-            .filter(|(_, course)| course.instructor_id == instructor_id)
+            .filter(|(_, course)| course.instructor_ids.contains(&instructor_id))
             .map(|(_, course)| course)
             .collect()
     })
@@ -136,5 +145,95 @@ pub fn get_student_courses(student_id: String) -> Vec<Course> {
             .filter(|(_, course)| course.enrolled_students.contains(&student_id))
             .map(|(_, course)| course)
             .collect()
+    })
+}
+
+/// Add an instructor to a course
+/// Only existing instructors of the course can add new instructors
+pub fn add_instructor_to_course(course_id: String, new_instructor_id: String) -> LMSResult<Course> {
+    is_teacher_or_admin()?;
+    
+    COURSES.with(|courses| {
+        let mut courses_map = courses.borrow_mut();
+        
+        match courses_map.get(&course_id) {
+            Some(mut course) => {
+                let caller = caller();
+                
+                // Security check: Only current instructors or admin can add new instructors
+                if !course.instructor_ids.contains(&caller.to_string()) {
+                    // Check if admin
+                    if crate::auth::is_admin().is_err() {
+                        return Err(LMSError::Unauthorized("Only current instructors or admin can add new instructors".to_string()));
+                    }
+                }
+                
+                // Add the new instructor to the list (avoiding duplicates)
+                if !course.instructor_ids.contains(&new_instructor_id) {
+                    course.instructor_ids.push(new_instructor_id.clone());
+                    course.updated_at = utils::current_time();
+                    let updated_course = course.clone();
+                    courses_map.insert(course_id.clone(), course);
+                    ic_cdk::println!("Added instructor {} to course {}", new_instructor_id, course_id);
+                    Ok(updated_course)
+                } else {
+                    Err(LMSError::AlreadyExists("Instructor already assigned to this course".to_string()))
+                }
+            }
+            None => Err(LMSError::NotFound("Course not found".to_string()))
+        }
+    })
+}
+
+/// Remove an instructor from a course
+/// Only existing instructors or admin can remove instructors
+/// At least one instructor must remain
+pub fn remove_instructor_from_course(course_id: String, instructor_id: String) -> LMSResult<Course> {
+    is_teacher_or_admin()?;
+    
+    COURSES.with(|courses| {
+        let mut courses_map = courses.borrow_mut();
+        
+        match courses_map.get(&course_id) {
+            Some(mut course) => {
+                let caller = caller();
+                
+                // Security check: Only current instructors or admin can remove instructors
+                if !course.instructor_ids.contains(&caller.to_string()) {
+                    // Check if admin
+                    if crate::auth::is_admin().is_err() {
+                        return Err(LMSError::Unauthorized("Only current instructors or admin can remove instructors".to_string()));
+                    }
+                }
+                
+                // Ensure at least one instructor remains
+                if course.instructor_ids.len() <= 1 {
+                    return Err(LMSError::ValidationError("Course must have at least one instructor".to_string()));
+                }
+                
+                // Remove the instructor from the list
+                if let Some(pos) = course.instructor_ids.iter().position(|x| *x == instructor_id) {
+                    course.instructor_ids.remove(pos);
+                    course.updated_at = utils::current_time();
+                    let updated_course = course.clone();
+                    courses_map.insert(course_id.clone(), course);
+                    ic_cdk::println!("Removed instructor {} from course {}", instructor_id, course_id);
+                    Ok(updated_course)
+                } else {
+                    Err(LMSError::NotFound("Instructor not found in this course".to_string()))
+                }
+            }
+            None => Err(LMSError::NotFound("Course not found".to_string()))
+        }
+    })
+}
+
+/// Get all instructors for a course
+pub fn get_course_instructors(course_id: String) -> LMSResult<Vec<String>> {
+    COURSES.with(|courses| {
+        match courses.borrow().get(&course_id) {
+            Some(course) => Ok(course.instructor_ids.clone()),
+            None => Err(LMSError::NotFound("Course not found".to_string()))
+        }
     })
 }

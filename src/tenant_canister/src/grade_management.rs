@@ -1,7 +1,6 @@
 use ic_cdk::caller;
 use shared::{Grade, GradeType, LMSResult, LMSError, utils};
 use crate::storage::GRADES;
-use crate::auth::is_teacher_or_admin;
 
 /// Record a grade for a student
 pub fn record_grade(
@@ -12,10 +11,24 @@ pub fn record_grade(
     grade_type: GradeType,
     feedback: Option<String>,
 ) -> LMSResult<Grade> {
-    // Only teachers and admins can record grades
-    is_teacher_or_admin()?;
+    // Verify caller is an instructor for this specific course or admin
+    let caller = caller();
+    crate::storage::COURSES.with(|courses| {
+        match courses.borrow().get(&course_id) {
+            Some(course) => {
+                if !course.instructor_ids.contains(&caller.to_string()) {
+                    // Check if admin
+                    if crate::auth::is_admin().is_err() {
+                        return Err(LMSError::Unauthorized("Only course instructors or admin can record grades".to_string()));
+                    }
+                }
+                Ok(())
+            }
+            None => Err(LMSError::NotFound("Course not found".to_string()))
+        }
+    })?;
     
-    let grader = caller();
+    let grader = caller;
     let grade_id = utils::generate_id("grade");
     
     GRADES.with(|grades| {
@@ -50,9 +63,24 @@ pub fn record_quiz_grade(
     max_score: f64,
     feedback: Option<String>,
 ) -> LMSResult<Grade> {
-    is_teacher_or_admin()?;
+    // Verify caller is an instructor for this specific course or admin
+    let caller = caller();
+    crate::storage::COURSES.with(|courses| {
+        match courses.borrow().get(&course_id) {
+            Some(course) => {
+                if !course.instructor_ids.contains(&caller.to_string()) {
+                    // Check if admin
+                    if crate::auth::is_admin().is_err() {
+                        return Err(LMSError::Unauthorized("Only course instructors or admin can record quiz grades".to_string()));
+                    }
+                }
+                Ok(())
+            }
+            None => Err(LMSError::NotFound("Course not found".to_string()))
+        }
+    })?;
     
-    let grader = caller();
+    let grader = caller;
     let grade_id = utils::generate_id("grade");
     
     GRADES.with(|grades| {
@@ -111,13 +139,30 @@ pub fn get_grade(grade_id: String) -> LMSResult<Grade> {
 
 /// Update a grade
 pub fn update_grade(grade_id: String, score: Option<f64>, feedback: Option<String>) -> LMSResult<Grade> {
-    is_teacher_or_admin()?;
+    let caller = caller();
     
     GRADES.with(|grades| {
         let mut grades_map = grades.borrow_mut();
         
         match grades_map.get(&grade_id) {
             Some(mut grade) => {
+                // Verify caller is an instructor for this specific course or admin
+                let course_id = grade.course_id.clone();
+                crate::storage::COURSES.with(|courses| {
+                    match courses.borrow().get(&course_id) {
+                        Some(course) => {
+                            if !course.instructor_ids.contains(&caller.to_string()) {
+                                // Check if admin
+                                if crate::auth::is_admin().is_err() {
+                                    return Err(LMSError::Unauthorized("Only course instructors or admin can update grades".to_string()));
+                                }
+                            }
+                            Ok(())
+                        }
+                        None => Err(LMSError::NotFound("Course not found".to_string()))
+                    }
+                })?;
+                
                 if let Some(new_score) = score {
                     grade.score = new_score;
                 }
@@ -125,7 +170,7 @@ pub fn update_grade(grade_id: String, score: Option<f64>, feedback: Option<Strin
                     grade.feedback = Some(new_feedback);
                 }
                 grade.graded_at = utils::current_time();
-                grade.graded_by = caller().to_string();
+                grade.graded_by = caller.to_string();
                 
                 grades_map.insert(grade_id, grade.clone());
                 Ok(grade)

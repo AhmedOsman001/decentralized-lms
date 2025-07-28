@@ -1,78 +1,105 @@
 type Course = record {
   id : text;
   title : text;
-  updated_at : nat64;
   description : text;
-  created_at : nat64;
+  instructor_ids : vec text;
   tenant_id : text;
   lessons : vec text;
-  is_published : bool;
   enrolled_students : vec text;
-  instructor_id : text;
+  created_at : nat64;
+  updated_at : nat64;
+  is_published : bool;
+};
+
+type User = record {
+  id : text;
+  name : text;
+  email : text;
+  role : UserRole;
+  tenant_id : text;
+  created_at : nat64;
+  updated_at : nat64;
+  is_active : bool;
+};
+
+type UserRole = variant {
+  Student;
+  Instructor;
+  Admin;
+  TenantAdmin;
 };
 
 type Grade = record {
   id : text;
   student_id : text;
-  feedback : opt text;
+  quiz_id : opt text;
   lesson_id : opt text;
-  max_score : float64;
   course_id : text;
   score : float64;
-  graded_at : nat64;
-  graded_by : text;
+  max_score : float64;
   grade_type : GradeType;
-  quiz_id : opt text;
+  feedback : opt text;
+  graded_by : text;
+  graded_at : nat64;
 };
 
 type GradeType = variant { Assignment; Quiz; Final; Participation };
 
+type Result = variant { Ok; Err : LMSError };
+type Result_1 = variant { Ok : User; Err : LMSError };
+type Result_2 = variant { Ok : Course; Err : LMSError };
+type Result_3 = variant { Ok : Grade; Err : LMSError };
+type Result_4 = variant { Ok : vec text; Err : LMSError };
+
 type LMSError = variant {
   NotFound : text;
-  ValidationError : text;
   Unauthorized : text;
+  ValidationError : text;
+  InternalError : text;
   AlreadyExists : text;
   InvalidRole : text;
-  InternalError : text;
   InitializationError : text;
 };
 
-type Result = variant { Ok : Course; Err : LMSError };
-type Result_1 = variant { Ok; Err : LMSError };
-type Result_2 = variant { Ok : TenantData; Err : LMSError };
-type Result_3 = variant { Ok : User; Err : LMSError };
-type Result_4 = variant { Ok : Grade; Err : LMSError };
-
 type TenantData = record {
-  created_at : nat64;
   tenant_id : text;
-  is_initialized : bool;
   admin_principal : principal;
-};
-
-type User = record {
-  id : text;
-  updated_at : nat64;
-  name : text;
-  role : UserRole;
+  is_initialized : bool;
   created_at : nat64;
-  email : text;
-  tenant_id : text;
-  is_active : bool;
 };
 
-type UserRole = variant { Instructor; TenantAdmin; Student; Admin };
-
-service : () -> {
-  create_course : (text, text, text) -> (Result);
-  enroll_student : (text, text) -> (Result_1);
-  get_course : (text) -> (Result) query;
-  get_student_grades : (text) -> (vec Grade) query;
-  get_tenant_info : () -> (Result_2) query;
-  get_user : (text) -> (Result_3) query;
-  health_check : () -> (text) query;
-  list_courses : () -> (vec Course) query;
+service : {
+  // User Management
+  register_user : (text, text, text, UserRole, text) -> (Result_1);
   list_users : () -> (vec User) query;
-  record_grade : (text, text, float64, float64, GradeType, opt text) -> (Result_4);
-  register_user : (text, text, text, UserRole, text) -> (Result_3);
-};
+  get_user : (text) -> (Result_1) query;
+  update_user : (text, opt text, opt text, opt bool) -> (Result_1);
+
+  // Course Management
+  create_course : (text, text, text) -> (Result_2);
+  list_courses : () -> (vec Course) query;
+  get_course : (text) -> (Result_2) query;
+  update_course : (text, opt text, opt text, opt bool) -> (Result_2);
+  enroll_student : (text, text) -> (Result);
+
+  // Multiple Instructor Management
+  add_instructor_to_course : (text, text) -> (Result_2);
+  remove_instructor_from_course : (text, text) -> (Result_2);
+  get_course_instructors : (text) -> (Result_4) query;
+  get_instructor_courses : (text) -> (vec Course) query;
+  get_student_courses : (text) -> (vec Course) query;
+
+  // Grade Management
+  record_grade : (text, text, float64, float64, GradeType, opt text) -> (Result_3);
+  record_quiz_grade : (text, text, text, float64, float64, opt text) -> (Result_3);
+  get_student_grades : (text, text) -> (vec Grade) query;
+  get_course_grades : (text) -> (vec Grade) query;
+  get_grade : (text) -> (Result_3) query;
+  update_grade : (text, opt float64, opt text) -> (Result_3);
+  calculate_course_average : (text, text) -> (opt float64) query;
+
+  // System API
+  health_check : () -> (text) query;
+  get_tenant_info : () -> (variant { Ok : TenantData; Err : LMSError }) query;
+  recover_tenant_data : () -> (variant { Ok : TenantData; Err : LMSError });
+}

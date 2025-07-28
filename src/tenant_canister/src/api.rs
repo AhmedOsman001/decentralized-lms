@@ -73,6 +73,25 @@ pub fn get_student_courses(student_id: String) -> Vec<Course> {
     course_management::get_student_courses(student_id)
 }
 
+// Multi-Instructor Management API
+#[update]
+#[candid_method(update)]
+pub fn add_instructor_to_course(course_id: String, instructor_id: String) -> LMSResult<Course> {
+    course_management::add_instructor_to_course(course_id, instructor_id)
+}
+
+#[update]
+#[candid_method(update)]
+pub fn remove_instructor_from_course(course_id: String, instructor_id: String) -> LMSResult<Course> {
+    course_management::remove_instructor_from_course(course_id, instructor_id)
+}
+
+#[query]
+#[candid_method(query)]
+pub fn get_course_instructors(course_id: String) -> LMSResult<Vec<String>> {
+    course_management::get_course_instructors(course_id)
+}
+
 // Grade Management API
 #[update]
 #[candid_method(update)]

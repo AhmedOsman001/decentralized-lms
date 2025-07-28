@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    // Path to the compiled tenant canister WASM
+    // Path to the compiled tenant canister WASM (relative to the workspace root)
     let tenant_wasm_path = "../../.dfx/local/canisters/tenant_canister/tenant_canister.wasm";
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("tenant_wasm.rs");
@@ -22,8 +22,9 @@ fn main() {
                 // Write the generated code to a file
                 fs::write(&dest_path, code).unwrap();
                 println!("cargo:rerun-if-changed={}", tenant_wasm_path);
+                println!("cargo:warning=Successfully embedded tenant WASM: {} bytes", wasm_bytes.len());
             }
-            Err(_) => {
+            Err(e) => {
                 // If we can't read the WASM file, generate a placeholder
                 let placeholder_code = r#"
                     pub const TENANT_WASM: &[u8] = &[
@@ -32,7 +33,7 @@ fn main() {
                     ];
                 "#;
                 fs::write(&dest_path, placeholder_code).unwrap();
-                println!("cargo:warning=Tenant WASM not found, using placeholder");
+                println!("cargo:warning=Failed to read tenant WASM: {}", e);
             }
         }
     } else {

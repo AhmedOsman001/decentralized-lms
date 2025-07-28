@@ -38,7 +38,7 @@ mod tests {
             id: "course_1".to_string(),
             title: "Introduction to Rust".to_string(),
             description: "Learn Rust programming".to_string(),
-            instructor_id: "instructor_1".to_string(),
+            instructor_ids: vec!["instructor_1".to_string()],
             tenant_id: "tenant_1".to_string(),
             lessons: vec!["lesson_1".to_string(), "lesson_2".to_string()],
             enrolled_students: vec!["student_1".to_string()],
@@ -47,6 +47,37 @@ mod tests {
             is_published: true,
         };
         
+        let encoded = encode_one(&course).expect("Failed to encode course");
+        let decoded: Course = decode_one(&encoded).expect("Failed to decode course");
+        assert_eq!(course, decoded);
+    }
+    
+    #[test]
+    fn test_course_multiple_instructors() {
+        let course = Course {
+            id: "course_1".to_string(),
+            title: "Advanced Programming".to_string(),
+            description: "Team-taught course".to_string(),
+            instructor_ids: vec![
+                "instructor_1".to_string(),
+                "instructor_2".to_string(),
+                "ta_1".to_string()
+            ],
+            tenant_id: "tenant_1".to_string(),
+            lessons: vec![],
+            enrolled_students: vec![],
+            created_at: 1234567890,
+            updated_at: 1234567890,
+            is_published: false,
+        };
+        
+        // Test that all instructors are properly stored
+        assert_eq!(course.instructor_ids.len(), 3);
+        assert!(course.instructor_ids.contains(&"instructor_1".to_string()));
+        assert!(course.instructor_ids.contains(&"instructor_2".to_string()));
+        assert!(course.instructor_ids.contains(&"ta_1".to_string()));
+        
+        // Test serialization with multiple instructors
         let encoded = encode_one(&course).expect("Failed to encode course");
         let decoded: Course = decode_one(&encoded).expect("Failed to decode course");
         assert_eq!(course, decoded);

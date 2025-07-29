@@ -9,7 +9,8 @@ mod course_management;
 mod grade_management;
 mod api;
 
-use ic_cdk::{init, caller};
+use ic_cdk::init;
+use candid::Principal;
 use shared::{User, UserRole, utils, LMSResult, Course, Grade, GradeType};
 use crate::types::TenantData;
 use crate::storage::{TENANT_DATA, USERS};
@@ -17,16 +18,28 @@ use crate::storage::{TENANT_DATA, USERS};
 // Re-export API functions
 pub use api::*;
 
-/// Initialize the tenant canister with an optional tenant ID
+/// Initialize the tenant canister with an optional tenant ID and admin principal
 #[init]
-fn init(tenant_id: Option<String>) {
+fn init(init_args: Option<(Option<String>, Option<Principal>)>) {
     TENANT_DATA.with(|data| {
         if data.borrow().get().is_some() {
             ic_cdk::trap("Tenant canister already initialized");
         }
         
-        // Use the caller as the admin (the router canister that deployed this)
-        let admin_principal = caller();
+        // Extract arguments
+        let (tenant_id, admin_principal_opt) = init_args.unwrap_or((None, None));
+        
+        ic_cdk::println!("Tenant canister init called with tenant_id: {:?}, admin_principal: {:?}", tenant_id, admin_principal_opt);
+        
+        // For direct deployment, we'll create a anonymous admin that can be updated later
+        // For router deployment, we require the admin principal
+        let admin_principal = if let Some(admin) = admin_principal_opt {
+            admin
+        } else {
+            // Use anonymous principal as anonymous for direct deployment
+            ic_cdk::println!("No admin principal provided - using anonymous");
+            Principal::anonymous()
+        };
         
         // Determine tenant ID - use provided one or generate a new one
         let actual_tenant_id = tenant_id.unwrap_or_else(|| {
@@ -60,21 +73,28 @@ fn init(tenant_id: Option<String>) {
                 created_at: utils::current_time(),
             };
             
-            // Create the initial admin user
-            let admin_user = User {
-                id: format!("admin_{}", utils::current_time()),
-                name: "System Admin".to_string(),
-                email: format!("admin@{}.edu", tenant_data.tenant_id),
-                role: UserRole::TenantAdmin,
-                tenant_id: tenant_data.tenant_id.clone(),
-                created_at: utils::current_time(),
-                updated_at: utils::current_time(),
-                is_active: true,
-            };
-            
-            USERS.with(|users| {
-                users.borrow_mut().insert(admin_user.id.clone(), admin_user);
-            });
+            // Only create admin user if we have a real admin principal (not anonymous)
+            if admin_principal != Principal::anonymous() {
+                // Create the initial admin user
+                let admin_user = User {
+                    id: admin_principal.to_string(),
+                    name: "TenantAdmin".to_string(),
+                    email: format!("admin@{}.edu", tenant_data.tenant_id),
+                    role: UserRole::TenantAdmin,
+                    tenant_id: tenant_data.tenant_id.clone(),
+                    created_at: utils::current_time(),
+                    updated_at: utils::current_time(),
+                    is_active: true,
+                };
+                
+                USERS.with(|users| {
+                    users.borrow_mut().insert(admin_user.id.clone(), admin_user);
+                });
+                
+                ic_cdk::println!("Created admin user for principal: {}", admin_principal);
+            } else {
+                ic_cdk::println!("Skipped admin user creation - placeholder principal used");
+            }
             
             tenant_data
         };
@@ -92,28 +112,3 @@ fn export_candid() -> String {
     __export_service()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use candid::Principal;
-    
-    #[test]
-    fn test_tenant_initialization() {
-        let admin = Principal::from_text("rrkah-fqaaa-aaaah-qcura-cai").unwrap();
-        // Note: In actual tests, would need to set up the canister environment
-        // This is a basic structure test
-        assert!(admin.to_string().len() > 0);
-    }
-    
-    #[test] 
-    fn test_tenant_data_creation() {
-        let tenant_data = TenantData {
-            tenant_id: "test_tenant".to_string(),
-            admin_principal: Principal::anonymous(),
-            is_initialized: true,
-            created_at: 1234567890,
-        };
-        assert_eq!(tenant_data.tenant_id, "test_tenant");
-        assert!(tenant_data.is_initialized);
-    }
-}

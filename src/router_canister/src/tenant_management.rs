@@ -63,7 +63,7 @@ pub async fn register_university(
         name: university_name.clone(),
         subdomain: subdomain.clone(),
         canister_id: canister_id.to_string(),
-        admin_ids: vec![caller().to_string()],
+        admin_ids: vec![admin_principal.to_string()],
         created_at: current_time(),
         updated_at: current_time(),
         is_active: true,
@@ -107,7 +107,7 @@ pub async fn register_tenant(
         name: name.clone(),
         subdomain: domain.clone(),
         canister_id: principal.to_string(),
-        admin_ids: vec![caller().to_string()],
+        admin_ids: vec![caller().to_string()], // Keep caller for legacy compatibility
         created_at: current_time(),
         updated_at: current_time(),
         is_active: true,

@@ -47,7 +47,7 @@ pub async fn delete_canister(canister_id: Principal) -> Result<(), String> {
 pub async fn install_from_template(
     canister_id: Principal,
     _template_canister_id: Principal, // Prefixed with _ to avoid unused warning
-    _admin_principal: Principal,      // Prefixed with _ to avoid unused warning
+    admin_principal: Principal,
     tenant_id: String,
 ) -> Result<(), String> {
     // Use the embedded tenant WASM
@@ -56,9 +56,12 @@ pub async fn install_from_template(
     // Log the WASM size for debugging
     ic_cdk::println!("Installing tenant WASM: {} bytes", tenant_wasm.len());
     
-    // Create initialization arguments: Some(tenant_id: String)
-    let init_args = candid::encode_one(&Some(tenant_id.clone()))
-        .map_err(|e| format!("Failed to encode tenant ID: {}", e))?;
+    // Create initialization arguments: Option<(tenant_id: Option<String>, admin_principal: Option<Principal>)>
+    let init_args = candid::encode_args((Some((Some(tenant_id.clone()), Some(admin_principal))),))
+        .map_err(|e| format!("Failed to encode init args: {}", e))?;
+    
+    ic_cdk::println!("Encoded init args for tenant_id: {} and admin_principal: {}", tenant_id, admin_principal);
+    ic_cdk::println!("Init args bytes length: {}", init_args.len());
     
     let install_args = InstallCodeArgument {
         mode: CanisterInstallMode::Install,
@@ -69,7 +72,8 @@ pub async fn install_from_template(
     
     match install_code(install_args).await {
         Ok(_) => {
-            ic_cdk::println!("Successfully installed tenant WASM on canister {} with tenant_id: {}", canister_id, tenant_id);
+            ic_cdk::println!("Successfully installed tenant WASM on canister {} with tenant_id: {} and admin: {}", 
+                           canister_id, tenant_id, admin_principal);
             Ok(())
         },
         Err((code, msg)) => Err(format!("Install template failed: {:?} - {}", code, msg)),

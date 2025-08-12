@@ -10,7 +10,7 @@ use std::borrow::Cow;
 #[derive(CandidType, Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct Quiz {
     pub id: String,
-    pub lesson_id: String,
+    pub course_id: String,
     pub title: String,
     pub description: String,
     pub questions: Vec<Question>,
@@ -32,7 +32,7 @@ pub struct Question {
 /// Types of questions
 #[derive(CandidType, Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub enum QuestionType {
-    MultipleChoice { options: Vec<String>, correct_answer: usize },
+    MultipleChoice { options: Vec<String>, correct_answer: u64 },
     TrueFalse { correct_answer: bool },
     ShortAnswer { sample_answer: String },
     Essay { max_words: Option<u32> },
@@ -45,16 +45,16 @@ pub struct QuizAttempt {
     pub student_id: String,
     pub answers: Vec<Answer>,
     pub score: Option<f64>,
-    pub max_score: f64,
     pub started_at: u64,
     pub submitted_at: Option<u64>,
-    pub attempt_number: u32,
+    pub time_remaining: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, CandidType, Serialize, Deserialize)]
 pub struct Answer {
     pub question_id: String,
     pub answer_text: String,
+    pub selected_options: Vec<String>,
     pub is_correct: Option<bool>,
 }
 

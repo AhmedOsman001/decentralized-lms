@@ -8,12 +8,16 @@ mod canister_management;
 mod tenant_management;
 mod inspection;
 mod api;
+mod http_routing;
 
 // Re-export public types for external use
 pub use types::{
     TemplateConfig, RouterStats, CycleInfo, 
     TenantRegistryInspection, RoutingTableInspection, FullSystemInspection
 };
+
+// Re-export HTTP routing functions
+pub use http_routing::{http_request, get_routing_stats, update_routing_entry};
 
 // The API functions are defined in the api module and are automatically 
 // exported as canister endpoints through the #[update] and #[query] macros

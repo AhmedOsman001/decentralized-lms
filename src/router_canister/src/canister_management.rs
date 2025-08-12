@@ -4,20 +4,25 @@ use ic_cdk::api::management_canister::main::{
     CreateCanisterArgument, CanisterSettings, CanisterIdRecord,
     InstallCodeArgument, CanisterInstallMode
 };
-use ic_cdk::id;
+use ic_cdk::{id, caller};
 
 // Include the tenant WASM bytes at compile time
 include!(concat!(env!("OUT_DIR"), "/tenant_wasm.rs"));
 
-/// Create a new canister using the management canister
-pub async fn create_canister() -> Result<Principal, String> {
+
+/// Create a new canister with specified admin as controller
+pub async fn create_canister_with_admin(admin_principal: Principal) -> Result<Principal, String> {
     // IC requires minimum 500 billion cycles to create a canister
     // We'll allocate 900 billion to ensure the tenant has enough to operate
     const TENANT_CYCLES: u128 = 900_000_000_000; // 900 billion cycles
 
     let create_args = CreateCanisterArgument {
         settings: Some(CanisterSettings {
-            controllers: Some(vec![id()]), // Router canister controls the tenant
+            controllers: Some(vec![
+                id(),               // Router canister as controller
+                caller(),           // Caller as controller
+                admin_principal,    // Admin as controller
+            ]), 
             compute_allocation: Some(0u64.into()),
             memory_allocation: Some(0u64.into()),
             freezing_threshold: Some(2_592_000u64.into()), // 30 days
@@ -27,7 +32,8 @@ pub async fn create_canister() -> Result<Principal, String> {
     
     match mgmt_create_canister(create_args, TENANT_CYCLES).await {
         Ok((record,)) => {
-            ic_cdk::println!("Created canister {} with {} cycles", record.canister_id, TENANT_CYCLES);
+            ic_cdk::println!("Created canister {} with {} cycles, controllers: [router: {}, caller: {}, admin: {}]", 
+                           record.canister_id, TENANT_CYCLES, id(), caller(), admin_principal);
             Ok(record.canister_id)
         },
         Err((code, msg)) => Err(format!("Create canister failed: {:?} - {}", code, msg)),

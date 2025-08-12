@@ -28,18 +28,93 @@ pub enum UserRole {
     TenantAdmin,
 }
 
-/// Role-based access control implementation
+impl Default for UserRole {
+    fn default() -> Self {
+        UserRole::Student
+    }
+}
+
+/// Role hierarchy and permissions implementation
 impl UserRole {
+    /// Get role hierarchy level (higher number = more permissions)
+    pub fn hierarchy_level(&self) -> u8 {
+        match self {
+            UserRole::Student => 1,
+            UserRole::Instructor => 2,
+            UserRole::Admin => 3,
+            UserRole::TenantAdmin => 4,
+        }
+    }
+    
+    /// Check if this role has equal or higher permissions than another role
+    pub fn has_permission_level(&self, required_role: &UserRole) -> bool {
+        self.hierarchy_level() >= required_role.hierarchy_level()
+    }
+    
+    /// Course management permissions
     pub fn can_create_course(&self) -> bool {
         matches!(self, UserRole::Instructor | UserRole::Admin | UserRole::TenantAdmin)
     }
     
+    pub fn can_edit_course(&self, is_course_owner: bool) -> bool {
+        match self {
+            UserRole::TenantAdmin | UserRole::Admin => true,
+            UserRole::Instructor => is_course_owner,
+            UserRole::Student => false,
+        }
+    }
+    
+    pub fn can_delete_course(&self, is_course_owner: bool) -> bool {
+        match self {
+            UserRole::TenantAdmin | UserRole::Admin => true,
+            UserRole::Instructor => is_course_owner,
+            UserRole::Student => false,
+        }
+    }
+    
+    /// User management permissions
     pub fn can_manage_users(&self) -> bool {
         matches!(self, UserRole::Admin | UserRole::TenantAdmin)
     }
     
+    pub fn can_view_all_users(&self) -> bool {
+        matches!(self, UserRole::Instructor | UserRole::Admin | UserRole::TenantAdmin)
+    }
+    
+    pub fn can_assign_role(&self, target_role: &UserRole) -> bool {
+        match self {
+            UserRole::TenantAdmin => true,
+            UserRole::Admin => !matches!(target_role, UserRole::TenantAdmin),
+            _ => false,
+        }
+    }
+    
+    /// Grading permissions
     pub fn can_grade(&self) -> bool {
         matches!(self, UserRole::Instructor | UserRole::Admin | UserRole::TenantAdmin)
+    }
+    
+    pub fn can_view_all_grades(&self) -> bool {
+        matches!(self, UserRole::Admin | UserRole::TenantAdmin)
+    }
+    
+    /// System administration permissions
+    pub fn can_manage_tenant_settings(&self) -> bool {
+        matches!(self, UserRole::TenantAdmin)
+    }
+    
+    pub fn can_export_data(&self) -> bool {
+        matches!(self, UserRole::Admin | UserRole::TenantAdmin)
+    }
+    
+    /// Get role name as string
+    pub fn as_str(&self) -> &str {
+        match self {
+            UserRole::Student => "Student",
+            UserRole::Instructor => "Instructor", 
+            UserRole::Admin => "Admin",
+            UserRole::TenantAdmin => "TenantAdmin",
+        }
     }
 }
 

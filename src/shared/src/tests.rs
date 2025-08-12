@@ -87,7 +87,7 @@ mod tests {
     fn test_quiz_serialization() {
         let quiz = Quiz {
             id: "quiz_1".to_string(),
-            lesson_id: "lesson_1".to_string(),
+            course_id: "course_1".to_string(),
             title: "Chapter 1 Quiz".to_string(),
             description: "Test your knowledge".to_string(),
             questions: vec![

@@ -3,20 +3,36 @@
 
 mod types;
 mod storage;
-mod auth;
+mod rbac;  // Role-Based Access Control module
 mod user_management;
 mod course_management;
-mod grade_management;
-mod api;
+mod grade;  // Modularized grade management
+mod quiz;   // Modularized quiz management
+mod grade_management;  // Re-export facade for grade management
+mod quiz_management;   // Re-export facade for quiz management
+mod pre_provision;     // Pre-provisioning for university authentication
+mod file_storage;      // File storage and asset management
+mod api;         // Modularized API endpoints
+mod http;        // Modularized HTTP handling
+mod http_handler;
 
 use ic_cdk::init;
 use candid::Principal;
-use shared::{User, UserRole, utils, LMSResult, Course, Grade, GradeType};
+use std::collections::HashMap;
+use shared::{
+    User, UserRole, utils, LMSResult, Course, Grade, GradeType, Quiz, QuizAttempt, Question, Answer,
+    PreProvisionedUser, PreProvisionStatus, UniversityImportRecord, ImportStats, EmailVerificationRequest,
+    FileMetadata, FileChunk, UploadSession, FileOperationResult, FileStats, PrivacyLevel, OwnerType
+};
 use crate::types::TenantData;
 use crate::storage::{TENANT_DATA, USERS};
 
 // Re-export API functions
 pub use api::*;
+// Re-export file storage functions
+pub use file_storage::*;
+// Re-export HTTP handler and types
+pub use http_handler::{http_request, HttpRequest, HttpResponse};
 
 /// Initialize the tenant canister with an optional tenant ID and admin principal
 #[init]

@@ -143,6 +143,13 @@ fn auto_configure_template() -> LMSResult<String> {
     crate::template::auto_configure_template()
 }
 
+/// Verify if caller is a controller of a tenant canister
+#[query]
+#[candid_method(query)]
+async fn verify_controller_access(tenant_id: String) -> LMSResult<bool> {
+    crate::tenant_management::verify_controller_access(tenant_id).await
+}
+
 /// Comprehensive inspection of tenant registry
 #[query]
 #[candid_method(query)]

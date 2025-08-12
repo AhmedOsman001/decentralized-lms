@@ -5,12 +5,12 @@ use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager, VirtualMemory}
 };
 use std::cell::RefCell;
-use shared::{Course, User, Grade, Lesson, Quiz};
+use shared::{Course, User, Grade, Lesson, Quiz, QuizAttempt, PreProvisionedUser};
 use crate::types::TenantData;
 
 pub type Memory = VirtualMemory<DefaultMemoryImpl>;
 
-// Tenant state storage
+// Tenant state storage with expanded quiz functionality
 thread_local! {
     pub static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(
         MemoryManager::init(DefaultMemoryImpl::default())
@@ -18,7 +18,7 @@ thread_local! {
     
     pub static TENANT_DATA: RefCell<StableCell<Option<TenantData>, Memory>> = RefCell::new(
         StableCell::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(5))),
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(6))), // Moved to higher ID
             None
         ).expect("Failed to initialize tenant data")
     );
@@ -50,6 +50,20 @@ thread_local! {
     pub static QUIZZES: RefCell<StableBTreeMap<String, Quiz, Memory>> = RefCell::new(
         StableBTreeMap::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(4)))
+        )
+    );
+    
+    // New storage for quiz attempts - separate from grades for better performance
+    pub static QUIZ_ATTEMPTS: RefCell<StableBTreeMap<String, QuizAttempt, Memory>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(5)))
+        )
+    );
+    
+    // Storage for pre-provisioned users before II linking
+    pub static PRE_PROVISIONED_USERS: RefCell<StableBTreeMap<String, PreProvisionedUser, Memory>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(7)))
         )
     );
 }

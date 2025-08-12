@@ -38,8 +38,8 @@ pub async fn register_university(
         }
     };
     
-    // Create new canister
-    let canister_id = match canister_management::create_canister().await {
+    // Create new canister with admin as controller
+    let canister_id = match canister_management::create_canister_with_admin(admin_principal).await {
         Ok(principal) => principal,
         Err(e) => return Err(LMSError::InternalError(format!("Failed to create canister: {:?}", e))),
     };
@@ -232,4 +232,29 @@ pub fn clear_all_tenants() -> String {
     
     ic_cdk::println!("Cleared all tenant data: {} tenants, {} routes", tenant_count, routing_count);
     format!("Cleared {} tenants and {} routing entries", tenant_count, routing_count)
+}
+
+/// Verify if caller is a controller of a tenant canister
+pub async fn verify_controller_access(tenant_id: String) -> LMSResult<bool> {
+    use ic_cdk::api::management_canister::main::{canister_status, CanisterIdRecord};
+    
+    // Get tenant info
+    let tenant = with_tenant_registry(|registry| {
+        registry.borrow().get(&tenant_id).map(|t| t.clone())
+    }).ok_or(LMSError::NotFound("Tenant not found".to_string()))?;
+    
+    // Parse canister ID
+    let canister_id = Principal::from_text(&tenant.canister_id)
+        .map_err(|_| LMSError::ValidationError("Invalid canister ID".to_string()))?;
+    
+    // Get canister status to check controllers
+    match canister_status(CanisterIdRecord { canister_id }).await {
+        Ok((status,)) => {
+            let caller_principal = caller();
+            Ok(status.settings.controllers.contains(&caller_principal))
+        },
+        Err((code, msg)) => {
+            Err(LMSError::InternalError(format!("Failed to get canister status: {:?} - {}", code, msg)))
+        }
+    }
 }

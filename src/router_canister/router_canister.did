@@ -13,6 +13,8 @@ type Result_1 = variant { Ok : Tenant; Err : LMSError };
 type Result_2 = variant { Ok; Err : LMSError };
 type Result_3 = variant { Ok : text; Err : LMSError };
 
+type Result_4 = variant { Ok : bool; Err : LMSError };
+
 type RouterStats = record {
   has_wasm_module : bool;
   routing_entries : nat64;
@@ -91,6 +93,9 @@ service : {
   get_template_config : () -> (TemplateConfig) query;
   auto_configure_template : () -> (Result_3);
   register_university : (text, text, principal) -> (Result_1);
+  
+  // Controller verification
+  verify_controller_access : (text) -> (Result_4) query;
   
   // Legacy registration (for backward compatibility)
   register_tenant : (text, text, text, text) -> (Result_1);

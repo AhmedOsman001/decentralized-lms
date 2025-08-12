@@ -45,11 +45,205 @@ type Grade = record {
 
 type GradeType = variant { Assignment; Quiz; Final; Participation };
 
+type Quiz = record {
+  id : text;
+  title : text;
+  description : text;
+  questions : vec Question;
+  course_id : text;
+  time_limit_minutes : opt nat32;
+  max_attempts : nat32;
+  created_at : nat64;
+  updated_at : nat64;
+};
+
+type Question = record {
+  id : text;
+  question_text : text;
+  question_type : QuestionType;
+  points : nat32;
+};
+
+type QuestionType = variant { 
+  MultipleChoice : record { options : vec text; correct_answer : nat64 };
+  TrueFalse : record { correct_answer : bool };
+  ShortAnswer : record { sample_answer : text };
+  Essay : record { max_words : opt nat32 };
+};
+
+type QuizAttempt = record {
+  id : text;
+  quiz_id : text;
+  student_id : text;
+  answers : vec Answer;
+  score : opt float64;
+  started_at : nat64;
+  submitted_at : opt nat64;
+  time_remaining : opt nat64;
+};
+
+type Answer = record {
+  question_id : text;
+  answer_text : text;
+  selected_options : vec text;
+  is_correct : opt bool;
+};
+
+// Pre-provisioning Types
+type PreProvisionedUser = record {
+  university_id : text;
+  email : text;
+  name : text;
+  role : UserRole;
+  department : opt text;
+  year_of_study : opt nat32;
+  course_codes : vec text;
+  created_at : nat64;
+  ii_principal : opt text;
+  is_verified : bool;
+  verification_code : opt text;
+  verification_expires : opt nat64;
+  status : PreProvisionStatus;
+};
+
+type PreProvisionStatus = variant {
+  Imported;
+  PendingVerification;
+  Verified;
+  Linked;
+  Expired;
+};
+
+type UniversityImportRecord = record {
+  university_id : text;
+  email : text;
+  name : text;
+  role : text;
+  department : opt text;
+  year_of_study : opt nat32;
+  course_codes : text;
+};
+
+type EmailVerificationRequest = record {
+  university_id : text;
+  email : text;
+  verification_code : text;
+};
+
+type ImportStats = record {
+  total_imported : nat32;
+  students_imported : nat32;
+  staff_imported : nat32;
+  errors : vec text;
+  timestamp : nat64;
+};
+
 type Result = variant { Ok; Err : LMSError };
 type Result_1 = variant { Ok : User; Err : LMSError };
 type Result_2 = variant { Ok : Course; Err : LMSError };
 type Result_3 = variant { Ok : Grade; Err : LMSError };
 type Result_4 = variant { Ok : vec text; Err : LMSError };
+type Result_5 = variant { Ok : Quiz; Err : LMSError };
+type Result_6 = variant { Ok : QuizAttempt; Err : LMSError };
+type Result_7 = variant { Ok : record { Quiz; vec QuizAttempt }; Err : LMSError };
+type Result_8 = variant { Ok : nat64; Err : LMSError };
+type Result_9 = variant { Ok : text; Err : LMSError };
+type Result_10 = variant { Ok : ImportStats; Err : LMSError };
+type Result_11 = variant { Ok : vec PreProvisionedUser; Err : LMSError };
+type Result_12 = variant { Ok : PreProvisionedUser; Err : LMSError };
+type Result_13 = variant { Ok : record { PreProvisionStatus; bool }; Err : LMSError };
+type Result_14 = variant { Ok : vec record { text; nat32 }; Err : LMSError };
+
+// File Storage Types
+type FileMetadata = record {
+  file_id : text;
+  file_name : text;
+  file_size : nat64;
+  file_type : text;
+  content_type : text;
+  uploader_id : text;
+  upload_date : nat64;
+  last_modified : nat64;
+  checksum : text;
+  chunk_count : nat32;
+  privacy_level : PrivacyLevel;
+  owner_type : OwnerType;
+  tags : vec text;
+  description : opt text;
+  is_public : bool;
+  download_count : nat64;
+  version : nat32;
+};
+
+type PrivacyLevel = variant {
+  Public;
+  TenantOnly;
+  Private;
+  Assignment;
+};
+
+type OwnerType = variant {
+  User : text;
+  Assignment : text;
+  System;
+};
+
+type FileChunk = record {
+  chunk_id : text;
+  file_id : text;
+  chunk_index : nat32;
+  data : vec nat8;
+  checksum : text;
+  upload_date : nat64;
+};
+
+type UploadSession = record {
+  session_id : text;
+  file_id : text;
+  uploader_id : text;
+  total_chunks : nat32;
+  uploaded_chunks : vec nat32;
+  file_metadata : FileMetadata;
+  created_at : nat64;
+  expires_at : nat64;
+  is_complete : bool;
+};
+
+type DownloadStream = record {
+  stream_id : text;
+  file_id : text;
+  requester_id : text;
+  start_chunk : nat32;
+  end_chunk : nat32;
+  created_at : nat64;
+  expires_at : nat64;
+};
+
+type FileOperationResult = record {
+  success : bool;
+  file_id : opt text;
+  session_id : opt text;
+  stream_id : opt text;
+  message : text;
+  bytes_processed : nat64;
+};
+
+type FileStats = record {
+  total_files : nat64;
+  total_size : nat64;
+  files_by_type : vec record { text; nat64 };
+  most_downloaded : vec record { text; nat64 };
+  storage_usage_by_user : vec record { text; nat64 };
+  cache_hit_ratio : float64;
+};
+
+// File Storage Result Types
+type Result_15 = variant { Ok : FileOperationResult; Err : LMSError };
+type Result_16 = variant { Ok : UploadSession; Err : LMSError };
+type Result_17 = variant { Ok : FileChunk; Err : LMSError };
+type Result_18 = variant { Ok : FileMetadata; Err : LMSError };
+type Result_19 = variant { Ok : vec FileMetadata; Err : LMSError };
+type Result_20 = variant { Ok : FileStats; Err : LMSError };
 
 type LMSError = variant {
   NotFound : text;
@@ -59,6 +253,12 @@ type LMSError = variant {
   AlreadyExists : text;
   InvalidRole : text;
   InitializationError : text;
+  // Enhanced RBAC Error Types
+  AccessDenied : text;
+  InsufficientPermissions : text;
+  UserNotAuthenticated : text;
+  RoleNotFound : text;
+  InvalidRoleAssignment : text;
 };
 
 type TenantData = record {
@@ -74,6 +274,7 @@ service : {
   list_users : () -> (vec User) query;
   get_user : (text) -> (Result_1) query;
   update_user : (text, opt text, opt text, opt bool) -> (Result_1);
+  get_public_user_names : (vec text) -> (vec record { text; text }) query;
 
   // Course Management
   create_course : (text, text, text) -> (Result_2);
@@ -92,14 +293,85 @@ service : {
   // Grade Management
   record_grade : (text, text, float64, float64, GradeType, opt text) -> (Result_3);
   record_quiz_grade : (text, text, text, float64, float64, opt text) -> (Result_3);
-  get_student_grades : (text, text) -> (vec Grade) query;
+  get_student_grades : (text) -> (vec Grade) query;
   get_course_grades : (text) -> (vec Grade) query;
   get_grade : (text) -> (Result_3) query;
   update_grade : (text, opt float64, opt text) -> (Result_3);
   calculate_course_average : (text, text) -> (opt float64) query;
 
+  // Advanced Grade Management Functions
+  record_advanced_grade : (text, text, float64, float64, GradeType, opt text, opt text, opt text) -> (Result_3);
+  update_advanced_grade : (text, opt float64, opt text, opt text, opt text) -> (Result_3);
+  get_student_grades_filtered : (text, opt text, opt GradeType, bool) -> (vec Grade) query;
+  get_course_grade_report : (text) -> (variant { Ok : text; Err : LMSError }) query;
+  calculate_weighted_average : (text, text, vec record { GradeType; float64 }) -> (opt float64) query;
+  bulk_import_grades : (text) -> (variant { Ok : text; Err : LMSError });
+  delete_grade_with_reason : (text, text) -> (Result);
+
+  // Quiz Management  
+  create_quiz : (text, text, text, vec Question, opt nat32, nat32) -> (Result_5);
+  update_quiz : (text, opt text, opt text, opt vec Question, opt nat32, opt nat32) -> (Result_5);
+  start_quiz_attempt : (text) -> (Result_6);
+  submit_quiz_attempt : (text, vec Answer) -> (Result_6);
+  get_quiz_with_progress : (text) -> (Result_7) query;
+  get_quiz_analytics : (text) -> (variant { Ok : text; Err : LMSError }) query;
+  delete_quiz : (text) -> (Result);
+
   // System API
   health_check : () -> (text) query;
   get_tenant_info : () -> (variant { Ok : TenantData; Err : LMSError }) query;
   recover_tenant_data : () -> (variant { Ok : TenantData; Err : LMSError });
+  get_user_count : () -> (Result_8) query;
+  is_authenticated : () -> (bool) query;
+
+  // RBAC (Role-Based Access Control) API
+  is_admin : () -> (bool) query;
+  is_teacher : () -> (bool) query;
+  is_student : () -> (bool) query;
+  get_current_user : () -> (Result_1) query;
+  get_current_user_role : () -> (variant { Ok : UserRole; Err : LMSError }) query;
+  has_role : (UserRole) -> (bool) query;
+  can_perform_action : (text) -> (bool) query;
+  get_caller_principal : () -> (text) query;
+  is_anonymous_caller : () -> (bool) query;
+  update_user_role : (text, UserRole) -> (Result_1);
+  deactivate_user : (text) -> (Result_1);
+  reactivate_user : (text) -> (Result_1);
+
+  // Pre-provisioning API for University Authentication
+  // Admin functions for importing university data
+  import_university_records : (vec UniversityImportRecord) -> (Result_10);
+  import_single_record : (UniversityImportRecord) -> (Result_9);
+  import_user_simple : (text, text, text, opt text, opt nat32, text) -> (Result_9);
+  list_pre_provisioned_users : () -> (Result_11) query;
+  get_pre_provisioned_user : (text) -> (Result_12) query;
+  delete_pre_provisioned_user : (text) -> (Result_9);
+  get_import_statistics : () -> (Result_14) query;
+
+  // Public functions for student authentication workflow
+  check_university_id : (text) -> (Result_9) query;
+  request_email_verification : (text, text) -> (Result_9);
+  verify_email : (EmailVerificationRequest) -> (Result_9);
+  link_internet_identity : (text, text) -> (Result_1);
+  get_linking_status : (text) -> (Result_13) query;
+
+  // File Storage API
+  // Upload Management
+  initiate_file_upload : (text, nat64, text, PrivacyLevel, OwnerType, opt text, vec text) -> (Result_15);
+  upload_file_chunk : (text, nat32, vec nat8) -> (Result_15);
+  get_upload_status : (text) -> (Result_16) query;
+
+  // Download Management  
+  initiate_file_download : (text, opt nat32, opt nat32) -> (Result_15);
+  download_file_chunk : (text, nat32) -> (Result_17) query;
+
+  // File Management
+  get_file_metadata : (text) -> (Result_18) query;
+  list_user_files : (opt text, opt PrivacyLevel, opt text, opt nat32, opt nat32) -> (Result_19) query;
+  delete_file : (text) -> (Result_15);
+  update_file_metadata : (text, opt text, opt vec text, opt PrivacyLevel) -> (Result_15);
+
+  // Storage Analytics
+  get_storage_stats : () -> (Result_20) query;
+  cleanup_expired_sessions : () -> (Result_9);
 }

@@ -1,13 +1,21 @@
 use ic_cdk::caller;
 use shared::{Course, LMSResult, LMSError, utils};
 use crate::storage::{COURSES, get_tenant_id};
-use crate::auth::is_teacher_or_admin;
+
+/// Helper function to check if caller can modify a specific course
+/// Returns true if caller is either an instructor of the course or an admin
+fn can_modify_course(course: &Course) -> bool {
+    let caller = caller();
+    // Check if caller is one of the course instructors
+    if course.instructor_ids.contains(&caller.to_string()) {
+        return true;
+    }
+    // Check if caller is admin
+    crate::rbac::is_admin_compat().is_ok()
+}
 
 /// Create a new course
 pub fn create_course(id: String, title: String, description: String) -> LMSResult<Course> {
-    // Only teachers and admins can create courses
-    is_teacher_or_admin()?;
-    
     let tenant_id = get_tenant_id()?;
     let caller = caller();
     
@@ -55,22 +63,16 @@ pub fn get_course(course_id: String) -> LMSResult<Course> {
 }
 
 /// Enroll a student in a course
+/// Caller must be verified by API layer before calling this function
 pub fn enroll_student(course_id: String, student_id: String) -> LMSResult<()> {
-    // Only course instructors and admins can enroll students
-    is_teacher_or_admin()?;
-    
     COURSES.with(|courses| {
         let mut courses_map = courses.borrow_mut();
         
         match courses_map.get(&course_id) {
             Some(mut course) => {
-                // Check if caller is one of the course instructors or admin
-                let caller = caller();
-                if !course.instructor_ids.contains(&caller.to_string()) {
-                    // Check if admin
-                    if crate::auth::is_admin().is_err() {
-                        return Err(LMSError::Unauthorized("Only course instructors or admin can enroll students".to_string()));
-                    }
+                // Course-specific authorization: only course instructors or admins can enroll
+                if !can_modify_course(&course) {
+                    return Err(LMSError::Unauthorized("Only course instructors or admin can enroll students".to_string()));
                 }
                 
                 if !course.enrolled_students.contains(&student_id) {
@@ -90,21 +92,16 @@ pub fn enroll_student(course_id: String, student_id: String) -> LMSResult<()> {
 }
 
 /// Update course information
+/// Caller must be verified by API layer before calling this function
 pub fn update_course(course_id: String, title: Option<String>, description: Option<String>, is_published: Option<bool>) -> LMSResult<Course> {
-    is_teacher_or_admin()?;
-    
     COURSES.with(|courses| {
         let mut courses_map = courses.borrow_mut();
         
         match courses_map.get(&course_id) {
             Some(mut course) => {
-                // Check if caller is one of the course instructors or admin
-                let caller = caller();
-                if !course.instructor_ids.contains(&caller.to_string()) {
-                    // Check if admin
-                    if crate::auth::is_admin().is_err() {
-                        return Err(LMSError::Unauthorized("Only course instructors or admin can update course".to_string()));
-                    }
+                // Course-specific authorization: only course instructors or admins can update
+                if !can_modify_course(&course) {
+                    return Err(LMSError::Unauthorized("Only course instructors or admin can update course".to_string()));
                 }
                 
                 if let Some(new_title) = title {
@@ -149,23 +146,16 @@ pub fn get_student_courses(student_id: String) -> Vec<Course> {
 }
 
 /// Add an instructor to a course
-/// Only existing instructors of the course can add new instructors
+/// Caller must be verified by API layer before calling this function  
 pub fn add_instructor_to_course(course_id: String, new_instructor_id: String) -> LMSResult<Course> {
-    is_teacher_or_admin()?;
-    
     COURSES.with(|courses| {
         let mut courses_map = courses.borrow_mut();
         
         match courses_map.get(&course_id) {
             Some(mut course) => {
-                let caller = caller();
-                
-                // Security check: Only current instructors or admin can add new instructors
-                if !course.instructor_ids.contains(&caller.to_string()) {
-                    // Check if admin
-                    if crate::auth::is_admin().is_err() {
-                        return Err(LMSError::Unauthorized("Only current instructors or admin can add new instructors".to_string()));
-                    }
+                // Course-specific authorization: only course instructors or admins can add instructors
+                if !can_modify_course(&course) {
+                    return Err(LMSError::Unauthorized("Only current instructors or admin can add new instructors".to_string()));
                 }
                 
                 // Add the new instructor to the list (avoiding duplicates)
@@ -186,24 +176,16 @@ pub fn add_instructor_to_course(course_id: String, new_instructor_id: String) ->
 }
 
 /// Remove an instructor from a course
-/// Only existing instructors or admin can remove instructors
-/// At least one instructor must remain
+/// Caller must be verified by API layer before calling this function
 pub fn remove_instructor_from_course(course_id: String, instructor_id: String) -> LMSResult<Course> {
-    is_teacher_or_admin()?;
-    
     COURSES.with(|courses| {
         let mut courses_map = courses.borrow_mut();
         
         match courses_map.get(&course_id) {
             Some(mut course) => {
-                let caller = caller();
-                
-                // Security check: Only current instructors or admin can remove instructors
-                if !course.instructor_ids.contains(&caller.to_string()) {
-                    // Check if admin
-                    if crate::auth::is_admin().is_err() {
-                        return Err(LMSError::Unauthorized("Only current instructors or admin can remove instructors".to_string()));
-                    }
+                // Course-specific authorization: only course instructors or admins can remove instructors
+                if !can_modify_course(&course) {
+                    return Err(LMSError::Unauthorized("Only current instructors or admin can remove instructors".to_string()));
                 }
                 
                 // Ensure at least one instructor remains

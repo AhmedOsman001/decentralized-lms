@@ -22,13 +22,18 @@ pub struct Grade {
     pub graded_at: u64,
 }
 
-/// Types of grades
-#[derive(CandidType, Deserialize, Serialize, Debug, Clone, PartialEq)]
+/// Types of grades - expanded for comprehensive grading system
+#[derive(CandidType, Deserialize, Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GradeType {
     Quiz,
     Assignment,
     Participation,
     Final,
+    Midterm,
+    Project,
+    Lab,
+    Homework,
+    ExtraCredit,
 }
 
 // Stable storage implementations

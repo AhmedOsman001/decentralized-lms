@@ -13,3 +13,4 @@ ic-cdk-macros = "0.13"
 ic-stable-structures = "0.6"
 serde = { version = "1.0", features = ["derive"] }
 shared = { path = "../shared", features = ["stable-storage"] }
+url = "2.4"

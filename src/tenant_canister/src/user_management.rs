@@ -1,11 +1,11 @@
 use shared::{User, UserRole, LMSResult, LMSError, utils};
 use crate::storage::{USERS, get_tenant_id};
-use crate::auth::is_admin;
+use crate::rbac::is_admin_compat;
 
 /// Register a new user in the tenant
 pub fn register_user(id: String, name: String, email: String, role: UserRole, tenant_id: String) -> LMSResult<User> {
     // Only admins can register users
-    is_admin()?;
+    is_admin_compat()?;
     
     // Validate input
     if !utils::is_valid_email(&email) {
@@ -60,7 +60,7 @@ pub fn get_user(user_id: String) -> LMSResult<User> {
 
 /// Update user information
 pub fn update_user(user_id: String, name: Option<String>, email: Option<String>, is_active: Option<bool>) -> LMSResult<User> {
-    is_admin()?;
+    is_admin_compat()?;
     
     USERS.with(|users| {
         let mut users_map = users.borrow_mut();
@@ -86,5 +86,39 @@ pub fn update_user(user_id: String, name: Option<String>, email: Option<String>,
             }
             None => Err(LMSError::NotFound("User not found".to_string()))
         }
+    })
+}
+
+/// Update a user's role
+pub fn update_user_role(user_id: String, new_role: UserRole) -> LMSResult<User> {
+    is_admin_compat()?;
+    
+    USERS.with(|users| {
+        let mut users_map = users.borrow_mut();
+        
+        match users_map.get(&user_id) {
+            Some(mut user) => {
+                user.role = new_role;
+                user.updated_at = utils::current_time();
+                
+                users_map.insert(user_id, user.clone());
+                Ok(user)
+            }
+            None => Err(LMSError::NotFound("User not found".to_string()))
+        }
+    })
+}
+
+/// Get public user display names for a list of user IDs (principals)
+/// Returns vector of (id, name) pairs for existing users. Missing users are skipped.
+pub fn get_public_user_names(user_ids: Vec<String>) -> Vec<(String, String)> {
+    USERS.with(|users| {
+        let user_map = users.borrow();
+        user_ids
+            .into_iter()
+            .filter_map(|id| {
+                user_map.get(&id).map(|u| (id, u.name.clone()))
+            })
+            .collect()
     })
 }

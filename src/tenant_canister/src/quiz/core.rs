@@ -4,7 +4,7 @@
 use shared::{Quiz, Question, LMSResult, LMSError, utils};
 use crate::storage::QUIZZES;
 use crate::rbac::require_teacher;
-use super::validation::{validate_course_access, validate_quiz_data, has_active_quiz_attempts, optimize_questions};
+use super::validation::{validate_course_access, validate_quiz_data, has_active_quiz_attempts, optimize_questions, validate_quiz_dates};
 
 /// Advanced quiz creation with validation and optimization
 pub fn create_quiz(
@@ -14,6 +14,9 @@ pub fn create_quiz(
     questions: Vec<Question>,
     time_limit_minutes: Option<u32>,
     max_attempts: u32,
+    start_date: u64,
+    end_date: u64,
+    duration_minutes: u32,
 ) -> LMSResult<Quiz> {
     // Validate permissions - only instructors and admins can create quizzes
     require_teacher()?;
@@ -23,6 +26,9 @@ pub fn create_quiz(
     
     // Validate quiz data
     validate_quiz_data(&title, &description, &questions, max_attempts)?;
+    
+    // Validate date ranges
+    validate_quiz_dates(start_date, end_date, duration_minutes)?;
     
     let quiz_id = utils::generate_id("quiz");
     let current_time = utils::current_time();
@@ -35,6 +41,9 @@ pub fn create_quiz(
         questions: optimize_questions(questions),
         time_limit_minutes,
         max_attempts,
+        start_date,
+        end_date,
+        duration_minutes,
         created_at: current_time,
         updated_at: current_time,
     };
@@ -54,6 +63,9 @@ pub fn update_quiz(
     questions: Option<Vec<Question>>,
     time_limit_minutes: Option<Option<u32>>,
     max_attempts: Option<u32>,
+    start_date: Option<u64>,
+    end_date: Option<u64>,
+    duration_minutes: Option<u32>,
 ) -> LMSResult<Quiz> {
     // Validate permissions
     require_teacher()?;
@@ -99,6 +111,23 @@ pub fn update_quiz(
                         return Err(LMSError::ValidationError("Max attempts must be at least 1".to_string()));
                     }
                     quiz.max_attempts = new_max_attempts;
+                }
+                
+                if let Some(new_start_date) = start_date {
+                    quiz.start_date = new_start_date;
+                }
+                
+                if let Some(new_end_date) = end_date {
+                    quiz.end_date = new_end_date;
+                }
+                
+                if let Some(new_duration) = duration_minutes {
+                    quiz.duration_minutes = new_duration;
+                }
+                
+                // Validate date consistency if any date fields were updated
+                if start_date.is_some() || end_date.is_some() || duration_minutes.is_some() {
+                    super::validation::validate_quiz_dates(quiz.start_date, quiz.end_date, quiz.duration_minutes)?;
                 }
                 
                 quiz.updated_at = utils::current_time();
@@ -150,5 +179,28 @@ pub fn get_quiz_with_access_check(quiz_id: String) -> LMSResult<Quiz> {
             }
             None => Err(LMSError::NotFound("Quiz not found".to_string()))
         }
+    })
+}
+
+/// List all quizzes for a specific course
+pub fn list_course_quizzes(course_id: String) -> LMSResult<Vec<Quiz>> {
+    // Validate course access first
+    super::validation::validate_quiz_access(&course_id)?;
+    
+    QUIZZES.with(|quizzes| {
+        let course_quizzes: Vec<Quiz> = quizzes
+            .borrow()
+            .iter()
+            .filter_map(|(_, quiz)| {
+                if quiz.course_id == course_id {
+                    Some(quiz.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        
+        ic_cdk::println!("Found {} quizzes for course: {}", course_quizzes.len(), course_id);
+        Ok(course_quizzes)
     })
 }

@@ -185,3 +185,49 @@ pub fn validate_quiz_access(course_id: &str) -> LMSResult<()> {
         Err(e) => Err(e)
     }
 }
+
+/// Validate quiz date and duration settings
+pub fn validate_quiz_dates(start_date: u64, end_date: u64, duration_minutes: u32) -> LMSResult<()> {
+    use shared::utils;
+    
+    let current_time = utils::current_time();
+    
+    // Validate that start date is not in the past (allow some tolerance for immediate quizzes)
+    if start_date < current_time.saturating_sub(300_000_000_000) { // 5 minutes tolerance
+        return Err(LMSError::ValidationError(
+            "Quiz start date cannot be in the past".to_string()
+        ));
+    }
+    
+    // Validate that end date is after start date
+    if end_date <= start_date {
+        return Err(LMSError::ValidationError(
+            "Quiz end date must be after start date".to_string()
+        ));
+    }
+    
+    // Validate duration is reasonable
+    if duration_minutes == 0 {
+        return Err(LMSError::ValidationError(
+            "Quiz duration must be at least 1 minute".to_string()
+        ));
+    }
+    
+    if duration_minutes > 1440 { // 24 hours
+        return Err(LMSError::ValidationError(
+            "Quiz duration cannot exceed 24 hours".to_string()
+        ));
+    }
+    
+    // Check that the quiz window (end_date - start_date) is at least as long as the duration
+    let window_duration_ns = end_date - start_date;
+    let duration_ns = (duration_minutes as u64) * 60 * 1_000_000_000; // Convert minutes to nanoseconds
+    
+    if window_duration_ns < duration_ns {
+        return Err(LMSError::ValidationError(
+            "Quiz availability window must be at least as long as the quiz duration".to_string()
+        ));
+    }
+    
+    Ok(())
+}

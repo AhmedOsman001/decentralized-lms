@@ -18,6 +18,20 @@ pub fn start_quiz_attempt(quiz_id: String) -> LMSResult<QuizAttempt> {
     // Validate quiz exists and student has access (enrolled in course)
     let quiz = get_quiz_with_access_check(quiz_id.clone())?;
     
+    // Check quiz availability based on start and end dates
+    let current_time = utils::current_time();
+    if current_time < quiz.start_date {
+        return Err(LMSError::ValidationError(
+            "Quiz has not started yet".to_string()
+        ));
+    }
+    
+    if current_time > quiz.end_date {
+        return Err(LMSError::ValidationError(
+            "Quiz has ended".to_string()
+        ));
+    }
+    
     // Check attempt limits
     let current_attempts = count_student_quiz_attempts(&student_id, &quiz_id);
     if current_attempts >= quiz.max_attempts {
@@ -44,7 +58,7 @@ pub fn start_quiz_attempt(quiz_id: String) -> LMSResult<QuizAttempt> {
         score: None,
         started_at: current_time,
         submitted_at: None,
-        time_remaining: quiz.time_limit_minutes.map(|t| t as u64 * 60), // Convert minutes to seconds
+        time_remaining: Some(quiz.duration_minutes as u64 * 60), // Use duration_minutes instead of time_limit_minutes
     };
     
     QUIZ_ATTEMPTS.with(|attempts| {

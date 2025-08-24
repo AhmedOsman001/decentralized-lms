@@ -15,8 +15,11 @@ pub fn create_quiz(
     questions: Vec<Question>,
     time_limit_minutes: Option<u32>,
     max_attempts: u32,
+    start_date: u64,
+    end_date: u64,
+    duration_minutes: u32,
 ) -> LMSResult<Quiz> {
-    quiz::create_quiz(course_id, title, description, questions, time_limit_minutes, max_attempts)
+    quiz::create_quiz(course_id, title, description, questions, time_limit_minutes, max_attempts, start_date, end_date, duration_minutes)
 }
 
 /// Update an existing quiz with validation
@@ -29,8 +32,11 @@ pub fn update_quiz(
     questions: Option<Vec<Question>>,
     time_limit_minutes: Option<Option<u32>>,
     max_attempts: Option<u32>,
+    start_date: Option<u64>,
+    end_date: Option<u64>,
+    duration_minutes: Option<u32>,
 ) -> LMSResult<Quiz> {
-    quiz::update_quiz(quiz_id, title, description, questions, time_limit_minutes, max_attempts)
+    quiz::update_quiz(quiz_id, title, description, questions, time_limit_minutes, max_attempts, start_date, end_date, duration_minutes)
 }
 
 /// Start a quiz attempt for the current student
@@ -63,6 +69,13 @@ pub fn get_quiz_analytics(quiz_id: String) -> LMSResult<String> {
         Ok(analytics) => Ok(format!("{:?}", analytics)), // Simplified for now
         Err(e) => Err(e)
     }
+}
+
+/// List all quizzes for a specific course
+#[query]
+#[candid_method(query)]
+pub fn list_course_quizzes(course_id: String) -> LMSResult<Vec<Quiz>> {
+    quiz::list_course_quizzes(course_id)
 }
 
 /// Delete quiz with safety checks

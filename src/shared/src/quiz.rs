@@ -16,6 +16,9 @@ pub struct Quiz {
     pub questions: Vec<Question>,
     pub time_limit_minutes: Option<u32>,
     pub max_attempts: u32,
+    pub start_date: u64,      // Unix timestamp in nanoseconds
+    pub end_date: u64,        // Unix timestamp in nanoseconds
+    pub duration_minutes: u32, // Quiz duration in minutes (for individual attempts)
     pub created_at: u64,
     pub updated_at: u64,
 }

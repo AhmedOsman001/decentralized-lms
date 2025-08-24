@@ -53,6 +53,9 @@ type Quiz = record {
   course_id : text;
   time_limit_minutes : opt nat32;
   max_attempts : nat32;
+  start_date : nat64;          // Quiz start date in nanoseconds
+  end_date : nat64;            // Quiz end date in nanoseconds  
+  duration_minutes : nat32;    // Quiz duration in minutes
   created_at : nat64;
   updated_at : nat64;
 };
@@ -274,7 +277,6 @@ service : {
   list_users : () -> (vec User) query;
   get_user : (text) -> (Result_1) query;
   update_user : (text, opt text, opt text, opt bool) -> (Result_1);
-  get_public_user_names : (vec text) -> (vec record { text; text }) query;
 
   // Course Management
   create_course : (text, text, text) -> (Result_2);
@@ -309,12 +311,13 @@ service : {
   delete_grade_with_reason : (text, text) -> (Result);
 
   // Quiz Management  
-  create_quiz : (text, text, text, vec Question, opt nat32, nat32) -> (Result_5);
-  update_quiz : (text, opt text, opt text, opt vec Question, opt nat32, opt nat32) -> (Result_5);
+  create_quiz : (text, text, text, vec Question, opt nat32, nat32, nat64, nat64, nat32) -> (Result_5);
+  update_quiz : (text, opt text, opt text, opt vec Question, opt nat32, opt nat32, opt nat64, opt nat64, opt nat32) -> (Result_5);
   start_quiz_attempt : (text) -> (Result_6);
   submit_quiz_attempt : (text, vec Answer) -> (Result_6);
   get_quiz_with_progress : (text) -> (Result_7) query;
   get_quiz_analytics : (text) -> (variant { Ok : text; Err : LMSError }) query;
+  list_course_quizzes : (text) -> (variant { Ok : vec Quiz; Err : LMSError }) query;
   delete_quiz : (text) -> (Result);
 
   // System API

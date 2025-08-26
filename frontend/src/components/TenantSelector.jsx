@@ -17,7 +17,7 @@ const TenantSelector = () => {
         setTenants(tenantList || []);
       } catch (err) {
         console.error('Failed to load tenants:', err);
-        setError(err.message);
+        // setError(err.message);
       } finally {
         setLoading(false);
       }

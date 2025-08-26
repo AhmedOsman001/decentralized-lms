@@ -23,7 +23,7 @@ const TenantDebugger = () => {
         
       } catch (err) {
         console.error('Failed to load tenant info:', err);
-        setError(err.message);
+        // setError(err.message);
       } finally {
         setLoading(false);
       }

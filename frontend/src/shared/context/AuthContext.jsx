@@ -415,7 +415,7 @@ export function AuthProvider({ children }) {
       case 'Instructor':
         return '/instructor';
       case 'TenantAdmin':
-        return '/tenant-admin';
+        return '/tenant-admin/dashboard';
       default:
         return '/login';
     }

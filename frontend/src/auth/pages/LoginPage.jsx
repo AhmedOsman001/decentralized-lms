@@ -53,28 +53,27 @@ const LoginPage = () => {
   // Redirect if user is already authenticated and linked
   useEffect(() => {
     if (authState === AUTH_STATES.LINKED && isAuthenticated && user) {
-      // Extract role from backend format: {Student: null} -> "student"
-      let userRole = 'student'; // default
+      // Extract role from backend format: {TenantAdmin: null} -> "TenantAdmin"
+      let userRole = 'Student'; // default
       if (user.role && typeof user.role === 'object') {
         const roleKeys = Object.keys(user.role);
         if (roleKeys.length > 0) {
-          userRole = roleKeys[0].toLowerCase();
+          userRole = roleKeys[0]; // Keep original case
         }
       } else if (typeof user.role === 'string') {
-        userRole = user.role.toLowerCase();
+        userRole = user.role;
       }
       
       console.log('Redirecting authenticated user to portal:', userRole);
       
       switch (userRole) {
-        case 'tenantadmin':
-        case 'admin':
-          navigate('/tenant-admin', { replace: true });
+        case 'TenantAdmin':
+          navigate('/tenant-admin/dashboard', { replace: true });
           break;
-        case 'instructor':
+        case 'Instructor':
           navigate('/instructor', { replace: true });
           break;
-        case 'student':
+        case 'Student':
         default:
           navigate('/student', { replace: true });
           break;
